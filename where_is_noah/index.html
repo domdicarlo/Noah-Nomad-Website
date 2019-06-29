@@ -16,7 +16,7 @@
 <script src="https://ajax.googleapis.com/ajax/libs/d3js/5.9.0/d3.min.js"></script>
 
 <script>
-// Where Is Noah? Script 
+// Where Is Noah? Country plotter 
 // By Dominic DiCarlo, June 2019
 // 
 
@@ -33,7 +33,7 @@
 
 // Hey Noah! This is where you can change the country
 // you want to display now. more functionality coming soon
-var selectedCountryName = "Japan";
+var selectedCountryName = "India";
 
 // UNDER CONSTRUCTION
 // Array for entering dates and countries 
@@ -75,14 +75,15 @@ var worldMap = (function () {
 //////////////////////////////////////////
 
 // this function draws an individual landform making up a country
-drawLandform = function(coordsMeta, ctx, minX, minY) {
+drawLandform = function(coordsMeta, ctx, maxX, maxY, minX, minY) {
     // for each coordinate in the polygon:
     for (var j = 0; j < coordsMeta.length; j++) {
         var longitude = coordsMeta[j][0];
         var latitude = coordsMeta[j][1];
     // Scale the points of the coordinate
     // to fit inside our bounding box
-        var point = coordScale(longitude, latitude, minX, minY);
+        var point = coordScale(longitude, latitude, maxX, maxY, 
+                               minX, minY);
         // If this is the first coordinate in a shape, start a new path
         if (j === 0) {
             ctx.beginPath();
@@ -101,11 +102,28 @@ drawLandform = function(coordsMeta, ctx, minX, minY) {
 }
 
 // this function scales the points in the polygon coords
-coordScale = function(longitude, latitude, minX, minY) {
-    var scaleFactor = 20;
-    // small adjustment
-    var nudgeX = 75;
-    var nudgeY = 575;
+coordScale = function(longitude, latitude, maxX, maxY, 
+                      minX, minY) {
+// console.log(longitude);
+    // it's going to get mathy here for a bit
+    var lengthX = maxX - minX;
+    var lengthY = maxY - minY;
+
+// console.log(lengthX);
+    var scaleFactor = diagonalSize / 
+                      (Math.sqrt((lengthX / lengthY) + 1) * lengthY);
+
+// console.log(scaleFactor);
+    // console.log(scaleFactor);
+    // scaleFactor = 20;
+    // console.log(scaleFactor);
+    // small adjustment for X
+    var nudgeX = 50;
+    // we nudge Y like this because the Y coordinate 0 
+    // starts at the top of the page. we end up flipping
+    // the coords so the countries don't get drawn
+    // upside down mirror flipped.
+    var nudgeY = lengthY * scaleFactor;
     var point = {
         x: ((longitude - minX) * scaleFactor) + nudgeX,
         y:  nudgeY - ((latitude - minY) * scaleFactor) 
@@ -117,6 +135,7 @@ coordScale = function(longitude, latitude, minX, minY) {
 // all of the points drawn to make a country so that 
 // every country ends up in the same place when it is drawn
 find_offsets = function(coords) {
+    console.log(coords[0]);
     // set the min coordinates to as high as possible
     var minX = Infinity;
     var minY = Infinity;
@@ -130,18 +149,19 @@ find_offsets = function(coords) {
         // for each coordinate
         for (var j = 0; j < coordsMeta.length; j++) {
             // we will update the minX and Y everytime we find
-            // a new smallest value for both
-            if (coordsMeta[0][0] < minX) {
-              minX = coordsMeta[0][0];
+            // a new smallest value for both (same for max)
+            console.log(coordsMeta[0][0]);
+            if (coordsMeta[j][0] < minX) {
+              minX = coordsMeta[j][0];
             }
-            if (coordsMeta[0][1] < minY) {
-              minY = coordsMeta[0][1];
+            if (coordsMeta[j][1] < minY) {
+              minY = coordsMeta[j][1];
             }
-            if (coordsMeta[0][0] > maxX) {
-              maxX = coordsMeta[0][0];
+            if (coordsMeta[j][0] > maxX) {
+              maxX = coordsMeta[j][0];
             }
-            if (coordsMeta[0][1] > maxY) {
-              maxY = coordsMeta[0][1];
+            if (coordsMeta[j][1] > maxY) {
+              maxY = coordsMeta[j][1];
             }
         }
     }
@@ -154,17 +174,17 @@ find_offsets = function(coords) {
         // for each coords[i] (--> coords[i][0])
         var coordsMeta = coords[i][0];
         for (var j = 0; j < coordsMeta.length; j++) {
-            if (coordsMeta[0][0] < minX) {
-              minX = coordsMeta[0][0];
+            if (coordsMeta[j][0] < minX) {
+              minX = coordsMeta[j][0];
             }
-            if (coordsMeta[0][1] < minY) {
-              minY = coordsMeta[0][1];
+            if (coordsMeta[j][1] < minY) {
+              minY = coordsMeta[j][1];
             }
-            if (coordsMeta[0][0] > maxX) {
-                maxX = coordsMeta[0][0];
+            if (coordsMeta[j][0] > maxX) {
+                maxX = coordsMeta[j][0];
             }
-            if (coordsMeta[0][1] > maxY) {
-                maxY = coordsMeta[0][1];
+            if (coordsMeta[j][1] > maxY) {
+                maxY = coordsMeta[j][1];
             }
         }
       }
@@ -199,6 +219,7 @@ findCountryData = function(countryName) {
 // The big draw function
 
 drawCountry = function() {
+    // Some preliminaries:
     // the data for the country
     var selectedCountryData = findCountryData(selectedCountryName);
 
@@ -223,12 +244,6 @@ drawCountry = function() {
     var maxY = offsets.maxY;
     var diagonal = Math.sqrt(Math.pow((maxX - minX), 2) + 
                              Math.pow((maxY - minY), 2))
-    console.log(diagonal);
-
-    // this is where the canvas text element is centered
-    var textCoords = coordScale(maxX, maxY, minX, minY)
-    ctx.font = "30px Arial";
-    ctx.fillText(selectedCountryName, textCoords.x, textCoords.y);
 
     // Onto drawing polygons
 
@@ -239,7 +254,7 @@ drawCountry = function() {
         // in an array (an array within an array)
         coordsMeta = coords[0];
         // draw the landform
-        drawLandform(coordsMeta, ctx, minX, minY);
+        drawLandform(coordsMeta, ctx, maxX, maxY, minX, minY);
     }
 
     // otherwise, we need to seq along the landforms and draw each
@@ -251,9 +266,15 @@ drawCountry = function() {
             // for each coords[i]
             var coordsMeta = coords[i][0];
 
-            drawLandform(coordsMeta, ctx, minX, minY);
+            drawLandform(coordsMeta, ctx, maxX, maxY, minX, minY);
         }
     }
+    // this is where the canvas text element is centered
+    var textCoords = coordScale(maxX, maxY, maxX, maxY,
+                                minX, minY);
+    ctx.font = "30px Arial";
+    ctx.fillText(selectedCountryName, textCoords.x, textCoords.y);
+
 }
 
 // we still have to call the function though:
