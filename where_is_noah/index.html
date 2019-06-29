@@ -46,6 +46,11 @@ var selectedCountryName = "Japan";
 // you would like
 var strokeWidth = 1.5;
 
+// You can change the size of the country via
+// it's diagonal of the minimum sized rectangle 
+// that encloses it
+var diagonalSize = 740;
+
 // define the path to the geojson file
 // on squarespace, should be /assets/noah.geo.json
 var myGeoJSONPath = './noah.geo.json';
@@ -216,6 +221,9 @@ drawCountry = function() {
     var minY = offsets.minY;
     var maxX = offsets.maxX;
     var maxY = offsets.maxY;
+    var diagonal = Math.sqrt(Math.pow((maxX - minX), 2) + 
+                             Math.pow((maxY - minY), 2))
+    console.log(diagonal);
 
     // this is where the canvas text element is centered
     var textCoords = coordScale(maxX, maxY, minX, minY)
