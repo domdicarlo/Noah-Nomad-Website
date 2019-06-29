@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GeoJSON Example</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>  
+    <script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
+</head>
+
+<body>
+  <canvas id="myCanvas" width="1000" height="1000"></canvas> 
+  <script
+  src="https://code.jquery.com/jquery-3.4.1.js"
+  integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+  crossorigin="anonymous"></script> 
+<script src="https://ajax.googleapis.com/ajax/libs/d3js/5.9.0/d3.min.js"></script>
+
+<script>
+// Where Is Noah? Script 
+// By Dominic DiCarlo, June 2019
+// 
+
+// TO BE ADDED: 
+// * Backend country control with 
+//   dates
+// * Scaler for country, e.g., control over size of 
+//   country that assures an even scale for all countries
+
+
+/////////////////////////////////////////
+////////// VARIABLES + IMPORT ///////////
+/////////////////////////////////////////
+
+// Hey Noah! This is where you can change the country
+// you want to display now. more functionality coming soon
+var selectedCountryName = "Japan";
+
+// UNDER CONSTRUCTION
+// Array for entering dates and countries 
+// Format [Start Date, End Date, Country]
+// Dates given in M(M)/DD/YYYY format
+[['7/14/2019', '8/12/2019', 'Japan'],
+ ['8/24/2019', '12/21/2019', 'India']]
+
+// You can also change the stroke width here if 
+// you would like
+var strokeWidth = 1.5;
+
+// define the path to the geojson file
+// on squarespace, should be /assets/noah.geo.json
+var myGeoJSONPath = './noah.geo.json';
+
+// this is the step where we import the json
+var worldMap = (function () {
+      var worldMap = null;
+      $.ajax({
+          'async': false,
+          'global': false,
+          'url': myGeoJSONPath,
+          'dataType': "json",
+          'success': function (data) {
+              worldMap = data;
+         }
+      });
+      return worldMap;
+})();  
+
+//////////////////////////////////////////
+//////////// HELPER FUNCTIONS ////////////
+//////////////////////////////////////////
+
+// this function draws an individual landform making up a country
+drawLandform = function(coordsMeta, ctx, minX, minY) {
+    // for each coordinate in the polygon:
+    for (var j = 0; j < coordsMeta.length; j++) {
+        var longitude = coordsMeta[j][0];
+        var latitude = coordsMeta[j][1];
+    // Scale the points of the coordinate
+    // to fit inside our bounding box
+        var point = coordScale(longitude, latitude, minX, minY);
+        // If this is the first coordinate in a shape, start a new path
+        if (j === 0) {
+            ctx.beginPath();
+            // here you can change line parameters
+            ctx.lineWidth = strokeWidth;
+            ctx.strokeStyle = "black"; 
+            ctx.moveTo(point.x, point.y);
+          // Otherwise just keep drawing
+        } 
+        else {
+            ctx.lineTo(point.x, point.y);
+        }
+    }
+    // this is where we add the colors to the line
+    ctx.stroke();
+}
+
+// this function scales the points in the polygon coords
+coordScale = function(longitude, latitude, minX, minY) {
+    var scaleFactor = 20;
+    // small adjustment
+    var nudgeX = 75;
+    var nudgeY = 575;
+    var point = {
+        x: ((longitude - minX) * scaleFactor) + nudgeX,
+        y:  nudgeY - ((latitude - minY) * scaleFactor) 
+    };
+    return point;
+}
+
+// This function is used to determine where we need to offset
+// all of the points drawn to make a country so that 
+// every country ends up in the same place when it is drawn
+find_offsets = function(coords) {
+    // set the min coordinates to as high as possible
+    var minX = Infinity;
+    var minY = Infinity;
+    var maxX = 0 - Infinity;
+    var maxY = 0 - Infinity;
+
+// if we are working with just one land form (polygon)
+    if(coords.length == 1) {
+        // selecting the array within the array
+        coordsMeta = coords[0];
+        // for each coordinate
+        for (var j = 0; j < coordsMeta.length; j++) {
+            // we will update the minX and Y everytime we find
+            // a new smallest value for both
+            if (coordsMeta[0][0] < minX) {
+              minX = coordsMeta[0][0];
+            }
+            if (coordsMeta[0][1] < minY) {
+              minY = coordsMeta[0][1];
+            }
+            if (coordsMeta[0][0] > maxX) {
+              maxX = coordsMeta[0][0];
+            }
+            if (coordsMeta[0][1] > maxY) {
+              maxY = coordsMeta[0][1];
+            }
+        }
+    }
+  // multiple landforms (polygons)
+  else {
+      for (var i = 0; i < coords.length; i++) {
+        // each Array is nested in a shell array,
+        // which is bad file formatting but it's what
+        // we're working with. This is why I index "0"
+        // for each coords[i] (--> coords[i][0])
+        var coordsMeta = coords[i][0];
+        for (var j = 0; j < coordsMeta.length; j++) {
+            if (coordsMeta[0][0] < minX) {
+              minX = coordsMeta[0][0];
+            }
+            if (coordsMeta[0][1] < minY) {
+              minY = coordsMeta[0][1];
+            }
+            if (coordsMeta[0][0] > maxX) {
+                maxX = coordsMeta[0][0];
+            }
+            if (coordsMeta[0][1] > maxY) {
+                maxY = coordsMeta[0][1];
+            }
+        }
+      }
+  }
+  return offsets = {
+      minX,
+      minY,
+      maxX,
+      maxY
+  };
+}
+
+// this function finds the country within the geoJSON file
+findCountryData = function(countryName) {
+    // check each country
+    for(i = 0; i < worldMap.features.length; i++) {
+        if(worldMap.features[i].properties.geounit ==
+           selectedCountryName) {
+            countryIndex = i;
+            // if we find it, exit the for loop
+            i = worldMap.features.length;
+        }
+    }
+    return worldMap.features[countryIndex];
+
+}
+
+////////////////////////////////////////
+//////////// LET'S DRAW ////////////////
+////////////////////////////////////////
+
+// The big draw function
+
+drawCountry = function() {
+    // the data for the country
+    var selectedCountryData = findCountryData(selectedCountryName);
+
+    // the polygon coordinates
+    var coords = selectedCountryData.geometry.coordinates;
+
+    // here we select the html canvas box that the 
+    // country gets drawn into
+    var canvas = document.getElementById("myCanvas");
+
+    // this is how you draw onto the canvas, by 
+    // grabbing the context
+    var ctx = canvas.getContext("2d");
+
+    // these are the offsets we feed
+    // to the scale function to draw the country
+    // so it doesn't fly off the screen
+    var offsets = find_offsets(coords);
+    var minX = offsets.minX;
+    var minY = offsets.minY;
+    var maxX = offsets.maxX;
+    var maxY = offsets.maxY;
+
+    // this is where the canvas text element is centered
+    var textCoords = coordScale(maxX, maxY, minX, minY)
+    ctx.font = "30px Arial";
+    ctx.fillText(selectedCountryName, textCoords.x, textCoords.y);
+
+    // Onto drawing polygons
+
+    // if coords length is 1, it means we only have one landform 
+    // to trace
+    if(coords.length == 1) {
+        // here, we select that one landform, since it is enclosed
+        // in an array (an array within an array)
+        coordsMeta = coords[0];
+        // draw the landform
+        drawLandform(coordsMeta, ctx, minX, minY);
+    }
+
+    // otherwise, we need to seq along the landforms and draw each
+    else {
+        for (var i = 0; i < coords.length; i++) {
+            // each Array is nested in a shell array,
+            // which is bad file formatting but it's what
+            // we're working with. This is why I index "0"
+            // for each coords[i]
+            var coordsMeta = coords[i][0];
+
+            drawLandform(coordsMeta, ctx, minX, minY);
+        }
+    }
+}
+
+// we still have to call the function though:
+drawCountry();
+
+</script>
+</body>
+
+</html>
