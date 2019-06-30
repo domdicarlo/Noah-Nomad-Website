@@ -8,7 +8,8 @@
 </head>
 
 <body>
-  <canvas id="myCanvas" width="1000" height="1000"></canvas> 
+  <canvas id="countryCanvas" width="400" height="400"></canvas> 
+  <canvas id="textCanvas" width="400" height="400"></canvas> 
   <script
   src="https://code.jquery.com/jquery-3.4.1.js"
   integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
@@ -33,7 +34,7 @@
 
 // Hey Noah! This is where you can change the country
 // you want to display now. more functionality coming soon
-var selectedCountryName = "India";
+var selectedCountryName = "Japan";
 
 // UNDER CONSTRUCTION
 // Array for entering dates and countries 
@@ -49,7 +50,7 @@ var strokeWidth = 1.5;
 // You can change the size of the country via
 // it's diagonal of the minimum sized rectangle 
 // that encloses it
-var diagonalSize = 740;
+var diagonalSize = 400;
 
 // define the path to the geojson file
 // on squarespace, should be /assets/noah.geo.json
@@ -75,7 +76,7 @@ var worldMap = (function () {
 //////////////////////////////////////////
 
 // this function draws an individual landform making up a country
-drawLandform = function(coordsMeta, ctx, maxX, maxY, minX, minY) {
+drawLandform = function(coordsMeta, ctxCountry, maxX, maxY, minX, minY) {
     // for each coordinate in the polygon:
     for (var j = 0; j < coordsMeta.length; j++) {
         var longitude = coordsMeta[j][0];
@@ -86,37 +87,30 @@ drawLandform = function(coordsMeta, ctx, maxX, maxY, minX, minY) {
                                minX, minY);
         // If this is the first coordinate in a shape, start a new path
         if (j === 0) {
-            ctx.beginPath();
+            ctxCountry.beginPath();
             // here you can change line parameters
-            ctx.lineWidth = strokeWidth;
-            ctx.strokeStyle = "black"; 
-            ctx.moveTo(point.x, point.y);
+            ctxCountry.lineWidth = strokeWidth;
+            ctxCountry.strokeStyle = "black"; 
+            ctxCountry.moveTo(point.x, point.y);
           // Otherwise just keep drawing
         } 
         else {
-            ctx.lineTo(point.x, point.y);
+            ctxCountry.lineTo(point.x, point.y);
         }
     }
     // this is where we add the colors to the line
-    ctx.stroke();
+    ctxCountry.stroke();
 }
 
 // this function scales the points in the polygon coords
 coordScale = function(longitude, latitude, maxX, maxY, 
                       minX, minY) {
-// console.log(longitude);
     // it's going to get mathy here for a bit
     var lengthX = maxX - minX;
     var lengthY = maxY - minY;
-
-// console.log(lengthX);
     var scaleFactor = diagonalSize / 
                       (Math.sqrt((lengthX / lengthY) + 1) * lengthY);
 
-// console.log(scaleFactor);
-    // console.log(scaleFactor);
-    // scaleFactor = 20;
-    // console.log(scaleFactor);
     // small adjustment for X
     var nudgeX = 50;
     // we nudge Y like this because the Y coordinate 0 
@@ -135,7 +129,6 @@ coordScale = function(longitude, latitude, maxX, maxY,
 // all of the points drawn to make a country so that 
 // every country ends up in the same place when it is drawn
 find_offsets = function(coords) {
-    console.log(coords[0]);
     // set the min coordinates to as high as possible
     var minX = Infinity;
     var minY = Infinity;
@@ -150,7 +143,6 @@ find_offsets = function(coords) {
         for (var j = 0; j < coordsMeta.length; j++) {
             // we will update the minX and Y everytime we find
             // a new smallest value for both (same for max)
-            console.log(coordsMeta[0][0]);
             if (coordsMeta[j][0] < minX) {
               minX = coordsMeta[j][0];
             }
@@ -228,11 +220,11 @@ drawCountry = function() {
 
     // here we select the html canvas box that the 
     // country gets drawn into
-    var canvas = document.getElementById("myCanvas");
+    var canvas = document.getElementById("countryCanvas");
 
     // this is how you draw onto the canvas, by 
     // grabbing the context
-    var ctx = canvas.getContext("2d");
+    var ctxCountry = canvas.getContext("2d");
 
     // these are the offsets we feed
     // to the scale function to draw the country
@@ -254,7 +246,7 @@ drawCountry = function() {
         // in an array (an array within an array)
         coordsMeta = coords[0];
         // draw the landform
-        drawLandform(coordsMeta, ctx, maxX, maxY, minX, minY);
+        drawLandform(coordsMeta, ctxCountry, maxX, maxY, minX, minY);
     }
 
     // otherwise, we need to seq along the landforms and draw each
@@ -266,14 +258,26 @@ drawCountry = function() {
             // for each coords[i]
             var coordsMeta = coords[i][0];
 
-            drawLandform(coordsMeta, ctx, maxX, maxY, minX, minY);
+            drawLandform(coordsMeta, ctxCountry, maxX, maxY, minX, minY);
         }
     }
     // this is where the canvas text element is centered
-    var textCoords = coordScale(maxX, maxY, maxX, maxY,
+    var halfLengthX = (maxX - minX) / 2;
+    var lengthY = maxY - minY;
+    // the coord scale here is used to center the text below the 
+    // image of the country, in the middle
+    var textCoords = coordScale(maxX - halfLengthX,
+                                minY - (lengthY / 5), maxX, maxY,
                                 minX, minY);
-    ctx.font = "30px Arial";
-    ctx.fillText(selectedCountryName, textCoords.x, textCoords.y);
+                                console.log(textCoords);
+    ctxCountry.font = "30px Arial";
+    // the - 30 here for the x coord is to offset the text by 
+    // just a bit (the length of the text, since the coord above 
+    // centers the top left of the text
+    // If you change the font size, you may need to change this
+    // in the future
+    ctxCountry.fillText(selectedCountryName, 
+                        textCoords.x - 30, textCoords.y);
 
 }
 
