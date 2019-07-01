@@ -3,45 +3,54 @@
 <head>
     <title>GeoJSON Example</title>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>  
-    <script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
 </head>
 
 <body>
-  <canvas id="countryCanvas" width="400" height="400"></canvas> 
-  <canvas id="textCanvas" width="400" height="400"></canvas> 
-  <script
-  src="https://code.jquery.com/jquery-3.4.1.js"
-  integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
-  crossorigin="anonymous"></script> 
-<script src="https://ajax.googleapis.com/ajax/libs/d3js/5.9.0/d3.min.js"></script>
-
+  <canvas id="countryCanvas" width="565" height="565"></canvas> 
 <script>
 // Where Is Noah? Country plotter 
 // By Dominic DiCarlo, June 2019
 // 
 
 // TO BE ADDED: 
-// * Backend country control with 
-//   dates
-// * Scaler for country, e.g., control over size of 
-//   country that assures an even scale for all countries
-
+// * Backend programming
+// * Need to fix y text scaling. Is good 9/10 (or 99/100)
+//   Essentially the fix here is to put the text into its own canvas
+// * Russia needs fixing. Don't go there Noah.
+// * Super small countries like Singapore look terrible 
+//   because of limits on the geoJSON. this can be fixed 
+//   with adding in a higher quality part of the json
+//   for these countries, or swapping into a higher quality
+//   geojson altogether. the former is tedious, the latter
+//   results in countries like Japan having a shit ton of
+//   extra land masses off the side.
 
 /////////////////////////////////////////
 ////////// VARIABLES + IMPORT ///////////
 /////////////////////////////////////////
 
-// Hey Noah! This is where you can change the country
-// you want to display now. more functionality coming soon
-var selectedCountryName = "Japan";
+// This is the default country if a country 
+// cannot be found in the data array
+var selectedCountryName = "United States";
 
-// UNDER CONSTRUCTION
+
 // Array for entering dates and countries 
 // Format [Start Date, End Date, Country]
 // Dates given in M(M)/DD/YYYY format
-[['7/14/2019', '8/12/2019', 'Japan'],
- ['8/24/2019', '12/21/2019', 'India']]
+var dateArray = [['7/14/2019', '8/12/2019', 'Japan'],
+                 ['8/24/2019', '12/21/2019', 'India']]
+
+var todayDate = Date.parse(new Date());
+
+// this for loop goes over the dateArray to find Noah
+for(var i = 0; i < dateArray.length; i++) {
+    var beginDate = Date.parse(dateArray[i][0]);
+    var endDate = Date.parse(dateArray[i][1]);
+    if (beginDate <= todayDate && todayDate <= endDate) {
+        selectedCountryName = dateArray[i][2];
+        break;
+    }
+}
 
 // You can also change the stroke width here if 
 // you would like
@@ -49,8 +58,9 @@ var strokeWidth = 1.5;
 
 // You can change the size of the country via
 // it's diagonal of the minimum sized rectangle 
-// that encloses it
-var diagonalSize = 400;
+// that encloses it. This is the thing you vary
+// for size of the country
+var diagonalSize = 565;
 
 // define the path to the geojson file
 // on squarespace, should be /assets/noah.geo.json
@@ -75,44 +85,46 @@ var worldMap = (function () {
 //////////// HELPER FUNCTIONS ////////////
 //////////////////////////////////////////
 
-// this function draws an individual landform making up a country
-drawLandform = function(coordsMeta, ctxCountry, maxX, maxY, minX, minY) {
-    // for each coordinate in the polygon:
-    for (var j = 0; j < coordsMeta.length; j++) {
-        var longitude = coordsMeta[j][0];
-        var latitude = coordsMeta[j][1];
-    // Scale the points of the coordinate
-    // to fit inside our bounding box
-        var point = coordScale(longitude, latitude, maxX, maxY, 
-                               minX, minY);
-        // If this is the first coordinate in a shape, start a new path
-        if (j === 0) {
-            ctxCountry.beginPath();
-            // here you can change line parameters
-            ctxCountry.lineWidth = strokeWidth;
-            ctxCountry.strokeStyle = "black"; 
-            ctxCountry.moveTo(point.x, point.y);
-          // Otherwise just keep drawing
-        } 
-        else {
-            ctxCountry.lineTo(point.x, point.y);
-        }
-    }
-    // this is where we add the colors to the line
-    ctxCountry.stroke();
+// this function gives a scale factor for coordS
+// so that countries can be drawn all at the appropriate
+// size. 
+// *****This function also resizes the canvas based on
+// the scale factor calculated******
+computeScaleFact = function(maxX, maxY, minX, minY) {
+    // it's going to get mathy here for a bit
+    // this is the algorithm to scale countries to
+    // the target diagonal
+    var lengthX = maxX - minX;
+    var lengthY = maxY - minY;
+    var oldDiagonal = Math.sqrt(lengthX * lengthX + lengthY * lengthY);
+    var newLengthY = Math.sqrt((diagonalSize * diagonalSize) / 
+                               (1 + Math.pow((lengthX / lengthY), 2)));
+    // var newLengthX = newLengthY * (lengthX / lengthY);
+    var newLengthX = Math.sqrt((diagonalSize * diagonalSize) / 
+                               (1 + Math.pow((lengthY / lengthX), 2)));
+    var scaleFactorX = newLengthX / lengthX;
+    var scaleFactorY = newLengthY / lengthY;
+    console.log(newLengthX);
+    console.log(newLengthY);
+    var scaleFactor = Math.max(scaleFactorX, scaleFactorY);
+    document.getElementById("countryCanvas").width = newLengthX;
+    document.getElementById("countryCanvas").height = newLengthY + 100;
+    return scaleFactor;
 }
 
 // this function scales the points in the polygon coords
 coordScale = function(longitude, latitude, maxX, maxY, 
-                      minX, minY) {
+                      minX, minY, scaleFactor) {
     // it's going to get mathy here for a bit
+    // this is the algorithm to scale countries to
+    // the target diagonal
     var lengthX = maxX - minX;
     var lengthY = maxY - minY;
-    var scaleFactor = diagonalSize / 
-                      (Math.sqrt((lengthX / lengthY) + 1) * lengthY);
+    // var scaleFactor = diagonalSize / 
+    //                  (Math.sqrt((lengthX / lengthY) + 1) * lengthY);
 
-    // small adjustment for X
-    var nudgeX = 50;
+    // small adjustment for X, like padding (set to 0 right now)
+    var nudgeX = 0;
     // we nudge Y like this because the Y coordinate 0 
     // starts at the top of the page. we end up flipping
     // the coords so the countries don't get drawn
@@ -201,7 +213,34 @@ findCountryData = function(countryName) {
         }
     }
     return worldMap.features[countryIndex];
+}
 
+// this function draws an individual landform making up a country
+drawLandform = function(coordsMeta, ctxCountry, maxX, maxY, minX, minY,
+                        scaleFactor) {
+    // for each coordinate in the polygon:
+    for (var j = 0; j < coordsMeta.length; j++) {
+        var longitude = coordsMeta[j][0];
+        var latitude = coordsMeta[j][1];
+    // Scale the points of the coordinate
+    // to fit inside our bounding box
+        var point = coordScale(longitude, latitude, maxX, maxY, 
+                               minX, minY, scaleFactor);
+        // If this is the first coordinate in a shape, start a new path
+        if (j === 0) {
+            ctxCountry.beginPath();
+            // here you can change line parameters
+            ctxCountry.lineWidth = strokeWidth;
+            ctxCountry.strokeStyle = "black"; 
+            ctxCountry.moveTo(point.x, point.y);
+          // Otherwise just keep drawing
+        } 
+        else {
+            ctxCountry.lineTo(point.x, point.y);
+        }
+    }
+    // this is where we add the colors to the line
+    ctxCountry.stroke();
 }
 
 ////////////////////////////////////////
@@ -220,11 +259,13 @@ drawCountry = function() {
 
     // here we select the html canvas box that the 
     // country gets drawn into
-    var canvas = document.getElementById("countryCanvas");
+    var countryCanvas = document.getElementById("countryCanvas");
+    // yes, this isn't being used right now
+    var textCanvas = document.getElementById("textCanvas");
 
     // this is how you draw onto the canvas, by 
     // grabbing the context
-    var ctxCountry = canvas.getContext("2d");
+    var ctxCountry = countryCanvas.getContext("2d");
 
     // these are the offsets we feed
     // to the scale function to draw the country
@@ -234,8 +275,11 @@ drawCountry = function() {
     var minY = offsets.minY;
     var maxX = offsets.maxX;
     var maxY = offsets.maxY;
-    var diagonal = Math.sqrt(Math.pow((maxX - minX), 2) + 
-                             Math.pow((maxY - minY), 2))
+
+    // compute the scale factor for all data points
+    // var scaleFactor = Math.sqrt(Math.pow((maxX - minX), 2) + 
+    //                          Math.pow((maxY - minY), 2))
+    var scaleFactor = computeScaleFact(maxX, maxY, minX, minY);
 
     // Onto drawing polygons
 
@@ -246,7 +290,8 @@ drawCountry = function() {
         // in an array (an array within an array)
         coordsMeta = coords[0];
         // draw the landform
-        drawLandform(coordsMeta, ctxCountry, maxX, maxY, minX, minY);
+        drawLandform(coordsMeta, ctxCountry, maxX, maxY, minX, minY,
+                     scaleFactor);
     }
 
     // otherwise, we need to seq along the landforms and draw each
@@ -258,7 +303,8 @@ drawCountry = function() {
             // for each coords[i]
             var coordsMeta = coords[i][0];
 
-            drawLandform(coordsMeta, ctxCountry, maxX, maxY, minX, minY);
+            drawLandform(coordsMeta, ctxCountry, maxX, maxY, minX, minY,
+                         scaleFactor);
         }
     }
     // this is where the canvas text element is centered
@@ -268,17 +314,16 @@ drawCountry = function() {
     // image of the country, in the middle
     var textCoords = coordScale(maxX - halfLengthX,
                                 minY - (lengthY / 5), maxX, maxY,
-                                minX, minY);
-                                console.log(textCoords);
+                                minX, minY, scaleFactor);
     ctxCountry.font = "30px Arial";
-    // the - 30 here for the x coord is to offset the text by 
-    // just a bit (the length of the text, since the coord above 
-    // centers the top left of the text
+    // the "- 6 * countryname.length" here for the x coord is
+    // to offset the text by just a bit (the length of the text, 
+    // since the coord above centers the top left of the text
     // If you change the font size, you may need to change this
     // in the future
     ctxCountry.fillText(selectedCountryName, 
-                        textCoords.x - 30, textCoords.y);
-
+                        textCoords.x - 8 * selectedCountryName.length,
+                        textCoords.y);
 }
 
 // we still have to call the function though:
