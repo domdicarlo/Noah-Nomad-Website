@@ -2,7 +2,7 @@
 
 You can check out this code featured at whereisnoah.com ! 
 
-## What
+## What I did
 
 My friend is a world traveler, and for fun would like to inform friends and family of his current whereabouts at the country-level resolution. So, I built him a small web applet that shows which country he is in. 
 
