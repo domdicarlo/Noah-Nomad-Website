@@ -14,6 +14,10 @@ Noah has to load in dates and their corresponding locations, after which the app
 
 This showcases my ability to manipulate javascript arrays (as there is a lot of that going on here), as well as develop scaling algorithms so that different countries of all shapes and sizes can fit nicely on a page whether on mobile or web. 
 
+## What could be improved
+
+Instead of using scaling algorithms, I think it would have been much easier and more standard to use css. I was quite new to web development when I did this project, so my implementation method reflects my inexperience. It was still cool to program the project in this way.
+
 ## Miscellaneous
 
 I have done some hard editing of the geoJSON file at times, so if you want to do something like this for yourself, make sure to use my geoJSON. 
