@@ -1,6 +1,6 @@
 # The Noah Adams Tracker
 
-You can check out this code featured at [whereisnoah.com] ! 
+You can check out this code featured at [whereisnoah.com](whereisnoah.com) ! 
 
 ## What I did
 
