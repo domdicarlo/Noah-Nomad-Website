@@ -1,12 +1,20 @@
-You can check out this code featured at whereisnoah.com !
+# The Noah Adams Tracker
 
-It updates based on an input array feauturing countries and dates. 
+You can check out this code featured at whereisnoah.com ! 
 
-It draws a country using its geoJSON data for path data. 
+## What
+
+My friend is a world traveler, and for fun would like to inform friends and family of his current whereabouts at the country-level resolution. So, I built him a small web applet that shows which country he is in. 
+
+## How it works
+
+Noah has to load in dates and their corresponding locations, after which the applet looks at the current date to determine where he should be. It updates based on an input array feauturing countries and dates. It draws a country using its geoJSON data for path data. 
+
+## What I learned
 
 This showcases my ability to manipulate javascript arrays (as there is a lot of that going on here), as well as develop scaling algorithms so that different countries of all shapes and sizes can fit nicely on a page whether on mobile or web. 
 
-It does not rely on any external libraries (aside from jquery for ajax at one point), working in vanilla javascript.
+## Miscellaneous
 
 I have done some hard editing of the geoJSON file at times, so if you want to do something like this for yourself, make sure to use my geoJSON. 
 
